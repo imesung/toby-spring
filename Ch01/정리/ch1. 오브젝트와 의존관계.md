@@ -4,6 +4,8 @@
 
 
 
+
+
 ### **상속을 통한 확장**
 
 - 소스코드를 제공하지 않고 클래스 파일만 제공하여 고객이 필요한 부분만을 수정해서 사용하게끔 할 수 있는가? Ex. DB Connection
@@ -30,6 +32,10 @@
 
 - 현재 상속 받고 있는 슈퍼클래스의 다른 목적이 필요할 경우 해당 슈퍼클래스를 상속받아야 하는데, 자바에서는 다중 상속이 지원되지 않는다.
 - 서브클래스와 슈퍼클래스는 밀접한 관계를 가지고 있다. 즉, 슈퍼 클래스의 수정이 서브 클래스에 영향을 미친다.
+
+
+
+
 
 
 
@@ -70,6 +76,10 @@
 
 
 
+
+
+
+
 ### **인터페이스의 도입**
 
 - 서로 긴밀하게 연결되어 있지 않도록 중간에 추상적인 느슨한 연결고리를 만들어주는 것이다.
@@ -88,6 +98,10 @@
   //UserDao
   connectionMaker = new DConnctionMaker();	//D사가 구현한 인터페이스 구현 클래스
   ~~~
+
+
+
+
 
 
 
@@ -130,6 +144,10 @@ UserDao를 직접적으로 수정해야하는 문제점을 해결해보자
     ~~~
 
   - 이로 인해, ConnectionMaker 인터페이스를 구현했다면 어떤 클래스로 만든 오브젝트더라도 UserDao의 생성자 파라미터로 들어오기만 하면 되므로, **UserDao는 DB 커넥션에 관련된 클래스에 관심도 없게 된다.**
+
+
+
+
 
 
 
@@ -184,6 +202,10 @@ SOLID 원칙이라고도 한다.
 
 
 >  **스프링이란, 지금까지 설명한 객체지향적 설계 원칙과 디자인 패턴에 나타난 장점을 자연스럽게 개발자들이 활용할 수 있게 해주는 프레임워크인 것이다.**
+
+
+
+
 
 
 
@@ -310,4 +332,90 @@ SOLID 원칙이라고도 한다.
 **자연스럽게 관심을 분리하고 책임을 나누고 유연하게 확장 가능한 구조로 만들기 위해 DaoFactory를 도입했던 과정이 IoC를 적용하는 작업이었다.**
 
 **현재 우리는 스프링을 사용하지 않고 IoC개념을 적용한 셈이다. 즉, IoC는 프레임워크만의 기술도 아니고 프레임워크가 꼭 필요한 개념도 아니다. 단순히 생각하면 디자인 패턴에서도 발견할 수 있는 프로그래밍 모델인 것이다.**
+
+
+
+
+
+
+
+### 스프링의 IoC
+
+- 스프링의 핵심을 담당하는 건, 바로 **빈 팩토리** 또는 **애플리케이션 컨텍스트**라고 불리는 것이다.
+- 이 두 가지는 우리가 만든 DaoFactory가 하는 일을 좀 더 일반화한 것이라고 생각하면 된다.
+
+
+
+### *오브젝트 팩토리를 이용한 스프링 IoC*
+
+**애플리케이션 컨텍스트와 설정정보**
+
+- 여기서는 우리가 만든 DaoFacotry를 스프링에서 사용 가능하도록 만들어 볼 것이다.
+- 스프링에서는 **스프링이 제어권을 가지고 직접 만들고 관계를 부여하는 오브젝트를 빈이라고 부른다.**
+- 스프링 빈은 **스프링 컨테이너가 생성과 관계설정, 사용 등을 제어해주는 제어의 역전이 적용된 오브젝트를 가리키는 말이다.**
+- 스프링에서 **빈의 생성과 관게설정 같은 제어를 담당하는 IoC 오브젝트를 *빈 팩토리 혹은 애플리케이션 컨텍스트*라고 부른다.**
+- **빈 팩토리와 애플리케이션 컨텍스트**
+  - 빈 팩토리 : 빈을 생성하고 관계를 설정하는 IoC의 기본 기능에 초점을 맞춘 것이다.
+  - 애플리케이션 컨텍스트 : 애플리케이션 전반에 걸쳐 모든 구성요소의 제어 작업을 담당하는 IoC 엔진이라는 의미이다.
+  - **빈 팩토리의 확장 버전을 애플리케이션 컨텍스트라고 보면 된다.**
+
+
+
+**DaoFactory를 사용하는 애플리케이션 컨텍스트**
+
+DaoFactory를 스프링의 빈 팩토리가 사용할 수 있는 본격적인 설정정보로 만들어보자.
+
+1. 먼저 스프링이 **빈 팩토리를 위한 오브젝트 설정을 담당하는 클래스라고 인식하기 위해 @Configuration을 추가한다.**
+2. 그 후 **오브젝트를 만들어 주는 메소드에는 @Bean을 붙여준다.**
+   - userDao() 메소드는 UserDao 타입 오브젝트를 생성하고 초기화해서 돌려주는 것이니 당연히 @Bean이 붙여진다.
+   - 또한, ConnectionMaker 타입의 오브젝트를 생성해주는 connectionMaker() 메소드에도 @Bean을 붙여준다.
+3. 이 두 가지 애노테이션 만으로 **스프링 프레임워크의 빈 팩토리 또는 애플리케이션 컨텍스트가 IoC 방식의 기능을 제공할 때 사용할 설정정보가 완성 된다.**
+
+~~~java
+@Configuration
+public class DaoFactory {
+
+    @Bean
+    public UserDao userDao() {
+        //return new UserDao(new DConnectionMaker());
+        return new UserDao(connectionMaker());
+    }
+
+		...
+
+    @Bean
+    public ConnectionMaker connectionMaker() {
+        return new DConnectionMaker();
+    }
+}
+~~~
+
+4. 이제 DaoFactory를 설정정보로 사용하는 **애플리케이션 컨텍스트를 만들어보자**
+5. **애플리케이션 컨텍스트는 ApplicationContext 타입의 오브젝트로서, ApplicationContext를 구현한 클래스는 여러가지가 존재하지는데, 그 중 @Configuration이 붙은 설정정보로 사용하려면 AnnotationConfigApplicationContext를 이용하면 된다.**
+6. 애플리케이션 컨텍스트를 만들 때 파라미터로 DaoFactory 클래스를 넣어주고, ApplicationContext의 getBean()을 통해 UserDao 오브젝트를 가져올 수 있다.
+
+~~~java
+public class UserDaoTest {
+    public static void main(String [] args) throws ClassNotFoundException, SQLException {
+        ApplicationContext context = new AnnotationConfigApplicationContext(DaoFactory.class);
+        UserDao userDao = context.getBean("userDao", UserDao.class);
+    }
+}
+~~~
+
+- getBean() 메소드는 ApplicationContext가 관리하는 오브젝트를 요청하는 메소드이다.
+- getBean()의 파라미터 중 "userDao"는 ApplicationContext에 등록된 빈의 이름이고, "userDao"는 DaoFactory 설정 정보에서 userDao() 메소드가 존재해야 하고, 해당 메소드에는 @Bean이라는 어노테이션이 붙여있어야 한다.
+  - 여기서 userDao라는 이름의 빈을 가져온다는 것은 DaoFactory의 userDao()메소드를 호출하고 그 결과를 가져온다는 것이다.
+
+
+
+- getBean()은 기본적으로 Object 타입으로 리턴하게 되어 있어 매번 캐스팅을 해줘야하는 부담이 있다.
+
+  - 자바 5 이상부터 제네릭 메소드 방식을 사용해서 getBean()의 두번째 파라미터에 리턴 타입을 주면, 지저분한 캐스팅 작업이 나타나지 않는다.
+
+- 스프링의 기능을 사용했으니, 필요한 라이브러리를 추가해줘야 한다.
+
+  <img src="https://user-images.githubusercontent.com/40616436/75903563-1e494100-5e85-11ea-8f5d-f7be77ec6cf2.png" alt="image" style="zoom:50%;" />
+
+
 
