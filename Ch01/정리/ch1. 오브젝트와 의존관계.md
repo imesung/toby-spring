@@ -647,5 +647,99 @@ public class UserDao {
 
 ### *싱글톤과 오브젝트의 상태*
 
+- **기본적으로 싱글톤이 멀티스레드 환경에서 서비스 형태의 오브젝트로 사용되는 경우에는 상태정보를 내부에 갖고 있지 않는 무상태 방식으로 만들어져야 한다.**
 
+  - 즉, 인스턴스 필드의 값을 변경하고 유지할 수 있는 상태가 아닌 방식으로 만들어져야한다. 혹은 해당 필드가 읽기 전용의 상태여야 한다.
+  - 만약 상태 방식으로 만들어지게 되면, 테스트를 진행했을 때는 이상이 없다가 서버 배포 후 다른 개발자에 의해서 원하는 값으로 적용되지 않는 경우가 만들어진다.
+
+- **그렇다면, 상태가 없는 방식으로 클래스를 만드는 경우엔 요청에 대한 정보나, DB, 서버의 리소스로부터 생성한 정보는 어떻게 다루는가?**
+
+  - 이 땐, 파라미터와 로컬변수, 리턴 값 등을 이용하면 된다.
+  - **메소드 파라미터나 메소드 안의 로컬 변수는 매번 새로운 값을 저장할 독립적인 공간이 만들어지기 때문에 싱글톤이라고 해도 여러 스레드가 변수의 값을 덮어쓸 일은 없다.**
+
+  
+
+- 싱글톤 빈으로 사용되는 클래스에서 인스턴스 변수로 사용했을 시.
+
+  ~~~java
+  public class UserDao {
+    //초기에 설정하면 사용 중에는 바뀌지 않는 읽기전용 인스턴스 변수
+    private ConnectionMaker connectionMaker;
+    
+    //매번 새로운 값으로 바뀌는 정보를 담은 인스턴스 변수 즉, 심각한 문제..
+    private Connectoin c;
+    private User user;
+    
+    public User get(String id) throws ClassNotFoundException, SQLException {
+      this.c = connectionMaker.makeConnection();
+      ...
+      
+      this.user = new User();
+      this.user.setId(rs.getString("id"));
+      this.user.setName(rs.getString("name"));
+      this.user.setPassword(rs.getString("password"));
+      ...
+      return this.user;
+    }
+  }
+  ~~~
+
+- 위 소스에서 기존 UserDao와 다른 점은 로컬 변수로 선언하고 있던 Connection과 User를 클래스의 인스턴스 변수로 선언했다는 것이다. 멀티스레드 환경에서 심각한 문제가 발생한다.
+
+  - **즉, 멀티 스레드 환경에서는 해당 인스턴스 변수는 배번 새로운 값으로 바뀔 수 있다는 것이다.**
+
+  - 따라서, 스프링의 싱글톤 빈으로 사용되는 클래스를 만들 때는 기존의 UserDao 처럼 개별적으로 바뀌는 정보는 로컬 변수로 정의하거나, 파라미터로 주고 받으면서 사용하게 해야 한다.
+
+    ~~~java
+    //기존 UserDao
+    public User get(String id) throws ClassNotFoundException, SQLException {
+      Connection c = connectionMaker.makeNewConnection();
+      PreparedStatement ps = c.prepareStatement("select * from users where id = ?");
+    
+      ps.setString(1, id);
+    
+      ResultSet rs = ps.executeQuery();
+      rs.next();
+      User user = new User();	//로컬 변수 정의
+      user.setId(rs.getString("id"));
+      user.setName(rs.getString("name"));
+      user.setPassword(rs.getString("password"));
+    
+      ps.executeUpdate();
+      ps.close();
+      c.close();
+    
+      return user;
+    }
+    ~~~
+
+- **그런데, 기존의 UserDao에서도 인스턴스 변수로 정의해서 사용한 것이 있다.**
+
+  - 바로 ConnectionMaker 인터페이스 타입의 connectionMaker이다.
+
+    ~~~java
+    public class UserDao {
+    	private ConnectionMaker connectionMaker;  
+    	...
+    }
+    ~~~
+
+    - 이것은 인스턴스 변수로 사용해도 상관이 없다.
+      - 이유는 connectionMaker는 읽기 전용의 정보이기 때문이다.
+      - 즉, connectionMaker는 등록, 수정을 하지 않고 그저 읽기만 하는 정보이다.
+    - **ConnectionMaker는 스프링이 한 번 초기화해주고 나면 이 후에는 수정되지 않기 때문에 멀티 스레드 환경에서도 아무런 문제없이 사용가능하다.**
+    - **이렇게 자신(UserDao)이 사용하는 다른 싱글톤 빈을 저장하려는 용도라면 인스턴스 변수를 사용해도 좋다.**
+
+  - 동일하게 읽기 전용의 속성을 가진 정보라면 싱글톤에서 인스턴스 변수로 사용해도 좋고, **static final이나 final로 선언하는 편이 나을 수도 있다.**
+
+
+
+### *스프링 빈의 스코프*
+
+- 스프링이 관리하는 오브젝트, 즉 빈이 생성되고 존재하고 적용되는 범위에 대해서 알아보자.
+  - 스프링에서는 이것을 **빈의 스코프** 라고 한다.
+  - 스프링 빈의 기본 스코프는 싱글톤이다.
+- 경우에 따라서 싱글톤 외의 스코프를 가질 수 있는데, 대표적으로 **프로토타입 스코프**가 있다.
+  - 프로트타입은 싱글톤과 달리 컨테이너에 빈을 요청할 때마다 매번 새로운 오브젝트를 만들어준다.
+- **그 외에도 웹을 통해 새로운 HTTP 요청이 생길 때마다 생성되는 Request 스코프가 있고, 웹의 세션과 스코프가 유사한 Session 스코프도 있다.**
 
