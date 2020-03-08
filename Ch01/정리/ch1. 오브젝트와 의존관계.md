@@ -9,7 +9,8 @@
 - 소스코드를 제공하지 않고 클래스 파일만 제공하여 고객이 필요한 부분만을 수정해서 사용하게끔 할 수 있는가? Ex. DB Connection
 - Connection 부분을 추상메소드로 만들어 고객에게 직접 구현할 수 있게끔 한다.
 	- 즉, 상속을 통해 확장하는 것이다.
-	- 그림 1-1
+	
+	  <img src="https://user-images.githubusercontent.com/40616436/76166481-303b2480-61a2-11ea-8f7d-2776662ad6f8.png" alt="image" style="zoom:50%;" />
 
 
 
