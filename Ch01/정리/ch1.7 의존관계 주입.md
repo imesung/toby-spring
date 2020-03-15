@@ -228,11 +228,11 @@
 
 *의존관계 검색(DL)과 의존관계 주입(DI) 적용 시 중요한 차이점*
 
-- **의존관계 검색 방식에서는 검색하는 오브젝트(UserDao)는 자신이 스프링의 빈일 필요가 없다.**
+- **의존관계 검색 방식에서는 검색하는 오브젝트(UserDao)는 자신이 스프링의 Bean일 필요가 없다.**
   - Ex. UserDao에서 스프링의 getBean()을 사용하여 의존관계 검색 방법을 사용하면 getBean()을 통해 검색되어야 하는 ConnectionMaker만 Bean으로 등록되어 있으면 된다.
-- **의존관계 주입 방식에서는 UserDao와 ConnectionMaker 사이에 DI가 적용되려면 UserDao도 반드시 빈으로 등록되어야 한다.**
-  - 컨테이너가 UserDao에 ConnectionMaker 오브젝트를 주입해주려면 UserDao에 대한 생성과 초기화 권한을 갖고 있어야함으로 빈으로 등록되어야 한다.
-- **DI를 원하는 오브젝트는 먼저 자기 자신이 컨테이너가 관리하는 빈이 되어야 한다는 점을 잊지 말자.**
+- **의존관계 주입 방식에서는 UserDao와 ConnectionMaker 사이에 DI가 적용되려면 UserDao도 반드시 Bean으로 등록되어야 한다.**
+  - 컨테이너가 UserDao에 ConnectionMaker 오브젝트를 주입해주려면 UserDao에 대한 생성과 초기화 권한을 갖고 있어야함으로 Bean으로 등록되어야 한다.
+- **DI를 원하는 오브젝트는 먼저 자기 자신이 컨테이너가 관리하는 Bean이 되어야 한다는 점을 잊지 말자.**
 
 
 
@@ -240,3 +240,166 @@
 >
 > - DI는 단지 외부에서 파라미터로 오브젝트를 넘겨줬다고 해서 즉, 주입해줬다고 해서 다 DI가 아니다.
 >   - 주입받는 메소드 파라미터가 이미 특정 클래스 타입으로 고정되어 있다면 DI가 일어날 수 없다(**인터페이스가 아니라면**)
+
+
+
+### *의존관계 주입의 응용*
+
+- DI 기술의 장점은 무엇일까?
+  - DaoFactory 방식이 DI 방식을 구현한 것이니, 해당 장점을 그대로 이어받는다.
+    1. 코드에는 런타임 클래스에 대한 의존관계가 나타나지 않는다.
+    2. 인터페이스를 통해 결합도가 낮은 코드를 만든다.
+    3. 다른 책임을 가진 객체(여러 ConnectionMaker)가 바뀌거가 변경되더라고 자신(UserDao)은 영향을 받지 않는다.
+    4. 변경을 통한 다양한 확장 방법이 자유롭다.
+
+
+
+- **UserDao가 ConnectionMaker라는 인터페이스에만 의존한다는 것은, 어떤 객체든 ConnectionMaker를 구현하기만 하고 있다면 어떤 오브젝트든지 사용할 수 있다는 뜻이다.**
+
+
+
+**몇 가지 응용 사례를 살펴보자**
+
+*기능 구현의 교환*
+
+- 만약 DI 방식을 사용하지 않고, DBConnectionMaker 클래스를 사용했다고 가정해보자.
+
+  - DI 방식 (즉, 관계설정과 생성 등을 주입)을 사용하지 않고, 개발 서버와 운영 서버를 분리하여 개발을 진행하고 있다.
+  - 이런 이유로 개발 서버는 개발 DB Connection의 환경설정이 필요하고, 운영 서버는 운영 DB Connection의 환경설정이 필요하다.
+  - 즉, 여러 DAO를 사용할 때 모든 DAO에 DBConnection를 하는 클래스를 각각 생성해줘야하고, 개발 서버에서 개발할 때는 개발 DBConnection으로 변경하고, 운영 서버에 배포할 때는 운영 DBConnection으로 변경해야하는 말도 안되는 일이 발생하는 것이다.
+
+- DI 방식을 사용하게 된다면!
+
+  - DI 방식을 사용하면 모든 DAO 생성 시점에 **ConnectionMaker 타입의 오브젝트를 컨테이너로부터 제공받는다.**
+
+  - 구제적인 사용 클래스 이름은 컨테이너가 사용할 설정 정보에 들어있다.
+
+  - 즉, **@Confguration이 붙은 DaoFactory를 사용한다고 하면 DBConnection에 관련된 메소드만 추가해서 사용하면 된다. 또한, 개발 서버면 개발 DBConnection으로 변경하고, 운영 서버면 운영 DBConnection으로 변경하면 되는 것이다.**
+
+    ~~~java
+    //개발 서버
+    @Bean
+    public ConnectionMaker connectionMaker() {
+      return new LocalDBConnectionMaker();
+    }
+    
+    //운영 서버
+    @Bean
+    public ConnectionMaker connectionMaker() {
+      return new LocalDBConnectionMaker();
+    }
+    ~~~
+
+  - 개발서버든, 운영서버든 단 한줄만 변경하면 되는 것이다! DAO가 아무리 많아도!
+
+
+
+*부가기능 추가*
+
+- DB가 몇 번이나 연결되어있는지 확인하고 싶다고 해보자.
+
+  - 그럼 DAO에서 makeConection() 메소드를 호출하는 소스를 수정해야할까? 이것은 올바른 방법이 아니다.
+
+    - DI 방식을 도입한 이유는 DAO코드의 수정을 피하려고 했던 것이 아닌가?!
+
+  - DI 컨테이너를 사용하면 아주 간단하게 가능하다.
+
+  - **컨테이너가 사용하는 설정정보만 수정해서 런타임 의존관계만 새롭게 정의해주면 된다.**
+
+  - CountingConnectionMaker 클래스를 구현하여 카운팅하는 로직을 만들자
+
+    ~~~java
+    public class CountingConnectionMaker implements ConnectionMaker {
+      int counter = 0;
+      private ConnectionMaker realConnectionMaker;
+      
+      public CountingConnectionMaker(ConnectionMaker realConnectionMaker) {
+        this.realConnectionMaker = realConnectionMaker;
+      }
+      
+      public Connection makeConnection() throws ClassNotFoundException, SQLException {
+        this.counter++;
+        return realConnectionMaker.makeConnection();
+      }
+      
+      public int getCounter() {
+        return this.counter;
+      }
+      
+    }
+    ~~~
+
+    - DAO가 DB 커넥션을 가져올 때마다 호출하는 makeConnection()에서 DB연결횟수 카운터를 증가시킨다.
+
+
+
+- CountingConnectionMaker가 추가되면서 UserDao와 ConnectionMaker의 의존관계가 어떻게 변화되는지 확인해보자
+
+  - CountingConnectionMaker를 사용하기 전이다.
+
+  <img src="https://user-images.githubusercontent.com/40616436/76698588-32dcd300-66e8-11ea-963c-d6eddfb2308b.png" alt="image" style="zoom:50%;" />
+
+  - **UserDao는 ConnectionMaker의 인터페이스에만 의존하고 있기 때문에, ConnectionMaker 인터페이스를 구현하고 있다면 어떤 것이든 DI가 가능하다.**
+
+  - 그로인해, UserDao 오브젝트가 DConnectionMaker 대신 CountingConnectionMaker 오브젝트로 바꿔치기하여 **DB 커넥션을 할 때마다 CountingConnectionMaker의 makeConnection() 메소드가 실행되어 카운터가 증가되는 것이다.**
+
+    <img src="https://user-images.githubusercontent.com/40616436/76698606-64559e80-66e8-11ea-87a8-30888c7ae8ce.png" alt="image" style="zoom:50%;" />
+
+  - 소스로 확인해보자
+
+    ~~~java
+    @Configuration
+    public class CountingDaoFactory {
+    
+        @Bean
+        public UserDao userDao() {
+            return new UserDao(connectionMaker());
+        }
+    
+        @Bean
+        public ConnectionMaker connectionMaker() {
+            return new CountingConnectionMaker(realConnectionMaker());
+        }
+    
+        @Bean
+        public ConnectionMaker realConnectionMaker() {
+            return new DConnectionMaker();
+        }
+    
+    }
+    ~~~
+
+    - 기존 DaoFactory와 달리, connectionMaker() 메소드에서 CountingConnectionMaker 타입 오브젝트를 생성하도록 만든다.
+    - 그리고 실제 DB Connection을 만들어주는 부분은 realConnectionMaker() 메소드에 의해서 만들어준다.
+    - **기존 DAO를 수정하지 않고, 카운팅되는 클래스의 추가만으로 부가 기능을 추가한 것을 볼 수 있다.**
+
+  - DB 커넥션 실행에 따른 카운팅하는 소스를 실행해보자
+
+    ~~~java
+    public class UserDaoConnectionCountingTest {
+        public static void main(String [] args) throws ClassNotFoundException, SQLException {
+    
+            ApplicationContext context = new AnnotationConfigApplicationContext(DaoFactory.class);
+    
+            UserDao userDao = context.getBean("userDao", UserDao.class);
+    
+            //DL을 사용하여 Bean을 가져오자 (getBean 시 이름을 통해서 Bean을 가져올 수 있다.)
+            CountingConnectionMaker countingConnectionMaker = context.getBean("connectionMaker", CountingConnectionMaker.class);
+          
+            System.out.println("Connection counter : " + countingConnectionMaker.getCounter());
+    
+        }
+    }
+    ~~~
+
+
+
+- 즉, **DAO가 의존하는 ConnectionMaker를 구현한 오브젝트 타입이면 DAO와 의존하는 것에 문제가 없으므로, CountingConnectionMaker를 구현하여 DAO와 의존시키면 우리가 원하는 DB 카운팅 값을 호출할 수 있는 것이다.**
+- **이런 식으로 진행하다, DB 카운팅 분석이 끝나면 그저 설정 클래스를 CountingDaoFactory에서 DaoFactory로 변경만 해주면 되는 것이다.**
+
+- **이 처럼, DI를 사용하게 된다면 많은 장점을 얻을 수 있는 것이다.**
+
+
+
+
+
