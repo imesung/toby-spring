@@ -215,3 +215,33 @@ public DataSource dataSource() {
   - 그 이유는, UserDao 처럼 다른 빈에 의존하는 경우에는 <property>를 활용하면 됐으나, SimpleDrvierDataSource 오브젝트의 경우 단순 Class 타입의 오브젝트나 텍스트 값이다. 
   - **그로인해, <property>형식으로 나타나지 않는 것이다. 그러면 XML에서는 어떻게 처리를 해야할 것인가?!**
 
+
+
+### *1.8.4 프로퍼티 값의 주입*
+
+*값 주입*
+
+- 다른 빈 오브젝트의 레퍼런스가 아니라 단순 값을 주입해주는 것이기 때문에 ref 대신 value를 사용한다.
+
+  <img src="https://user-images.githubusercontent.com/40616436/76705109-f8dbf300-6720-11ea-80a3-3b24d7d9de1f.png" alt="image" style="zoom:50%;" />
+
+
+
+*value 값의 자동 변환*
+
+- Url, username, password는 모두 스트링 타입이지만, driverClass는 java.lang.Class 타입인데도 불구하고 동일하게 스트링 형식으로 나타내도 오류가 발생하지 않는다.
+
+- 그 이유는, **스프링이 프로퍼티의 값을 수정자 메소드의 파라미터 타입을 참고로 해서 적절한 형태로 변환해주기 때문인다.**
+
+  - setDriverClass() 메소드의 파라미터 타입이 Class임을 확인하고 "com.mysql.jdbc.Driver"라는 텍스트 값을 com.mysql.jdbc.Driver 오브젝트로 자동 변경해주는 것이다.
+  - 내부적으로는 다음과 같은 변환 작업이 일어난다.
+
+  ~~~java
+  Class drvierClass = Class.forName("com.mysql.jdbc.Driver");
+  dataSource.setDriverClass(driverClass);
+  ~~~
+
+  
+
+
+
