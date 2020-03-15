@@ -401,5 +401,46 @@
 
 
 
+### *메소드를 이용한 의존관계 주입*
 
+- 지금까지 살펴본 의존관계 주입은 생성자를 통해 주입을 했는데, 꼭 생성자를 사용해야 하는 것은 아니다. **생성자가 아닌 일반 메소드를 이용해 의존 관계를 주입할 수 있는데 그 방법을 살펴보자.**
+
+
+
+*수정자(Setter) 메소드를 이용한 주입*
+
+- 수정자 메소드는 외부에서 오브젝트 내부의 Attribute값을 변경하려는 용도로 자주 사용된다.
+- 수정자 메소드는 **외부로부터 제공받은 오브젝트 레퍼런스를 저장해뒀다가, 내부의 메소드에서 사용하게 하는 DI 방식에서 활용하기에 적당하다.**
+
+
+
+*일반 메소드를 이용한 주입*
+
+- 수정자 메소드처럼 메소드 이름이 set으로 시작되어야하고, 한 번에 한 개의 파라미터만 가질 수 있다는 제약 대신, **일반 메소드를 사용하여 DI용을 사용**할 수 있다.
+- **임의의 초기화 메소드를 이용하는 DI를 사용하면 적절한 개수의 파라미터를 가진 여러 개의 초기화 메소드를 만들 수 있어, 필요한 모든 메소드를 한 번에 받아야 하는 생성자보다 낫다.**
+
+
+
+- UserDao도 수정자 메소드 DI 방식을 사용하도록 해보자
+
+  ~~~java
+  public class UserDao {
+     private ConnectionMaker connectionMaker;
+    
+     public void setConnectionMaker(ConnectionMaker connectionMaker) {
+          this.connectionMaker = connectionMaker;
+      }
+  }
+  
+  //Factory
+  @Bean
+  public UserDao userDao() {
+    //return new UserDao(connectionMaker());
+    UserDao userDao = new UserDao();
+    userDao.setConnectionMaker(connectionMaker());
+    return userDao;
+  }
+  ~~~
+
+  - 생성자는 모두 제거하고 수정자 메소드만 유지하고, DI를 적용하는 Factory의 코드도 수정해야 한다.
 

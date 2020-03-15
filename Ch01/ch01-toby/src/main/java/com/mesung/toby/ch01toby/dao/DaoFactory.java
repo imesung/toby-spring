@@ -9,7 +9,10 @@ public class DaoFactory {
     @Bean
     public UserDao userDao() {
         //return new UserDao(new DConnectionMaker());
-        return new UserDao(connectionMaker());
+        //return new UserDao(connectionMaker());
+        UserDao userDao = new UserDao();
+        userDao.setConnectionMaker(connectionMaker());
+        return userDao;
     }
 
     @Bean
