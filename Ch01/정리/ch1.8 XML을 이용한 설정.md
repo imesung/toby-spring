@@ -85,3 +85,61 @@ public UserDao userDao() {
 
 
 
+### *XML을 이용하는 애플리케이션 컨텍스트*
+
+- 이제 애플리케이션 컨텍스트가 DaoFactory를 대신하여 XML 설정정보를 활용하도록 만들어보자.
+
+- XML에서 빈의 의존관계 정보를 이용하는 IoC/DI 작업에는 **GenericXmlApplicationContext** 를 사용한다.
+
+- 애플리케이션 컨텍스트가 사용하는 XML 설정파일의 이름은 관례에 따라 applicationContext.xml이라고 만든다.
+
+  ~~~xml
+  <?xml version=1.0 encoding="UTF-8"?>
+  <beans>
+  	...
+  
+  	<bean id="connectionMaker" class="com.mesung.toby.ch01toby.dao.DConnectionMaker"/>
+    <bean id="userDao" class="com.mesung.toby.ch01toby.dao.UserDao">
+    	<property name="connectionMaker" ref="connectionMaker"/>
+    </bean>
+  </beans>
+  ~~~
+
+- 이제. UserDaoTest에서 애플리케이션 컨텍스트 생성 부분을 수정해보자.
+
+  ~~~java
+  ApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml");
+  ~~~
+
+
+
+*다양한 XML 설정정보*
+
+- XML 설정정보는 GenericXmlApplicationContext뿐만 아니라 ClassPathXmlApplicationContext를 이용할 수 있다.
+
+- ClassPathXmlApplicationContext의 기능중에는 클래스패스의 경로정보를 클래스에서 가져오게 하는 것이 있다.
+
+  - 만약, com.mesung.toby.ch01toby.dao 패키지 안에 daoContext.xml이라는 설정파일이 있다고 하면,
+
+  - GenericXmlApplicationContext가 daoContext.xml 파일을 사용하게 하려면 **클래스패스 루트로부터 파일의 위치를 지정해야한다.**
+
+    ~~~java
+    new GenericXmlApplicationContext("com/mesung/toby/ch01toby/dao/daoContext.xml");
+    ~~~
+
+  - ***반면에***, ClassPathXmlApplicationContext는 **XML 파일과 같은 클래스패스에 있는 클래스 오브젝트를 넘겨 클래스패스에 대한 힌트를 제공할 수 있다.**
+
+  - UserDao는 com.mesung.toby.ch01toby.dao 패키지에 있으므로 daoContext.xml과 같은 클래스패스 위에 있다.
+
+  - **이 UserDao를 함께 넣어주면 XML 파이르이 위치를 UserDao의 위치로부터 상대적으로 지정할 수 있다.**
+
+    ~~~java
+    new ClassPathXmlApplicationContext("daoContext.xml", UserDao.class);
+    ~~~
+
+- **하지만, 제일 무난한 것은 GenericXmlApplicationContext를 사용하는 것이다.**
+
+
+
+
+
