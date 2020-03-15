@@ -141,5 +141,77 @@ public UserDao userDao() {
 
 
 
+### *1.8.3 DataSource 인터페이스로 변환*
 
+*DataSource 인터페이스 적용*
+
+- UserDao에서 ConnectionMaker 대신 Datasource 인터페이스에서 제공해주는 DB 커넥션을 사용하자.
+
+  ~~~java
+  import javax.sql.Datasource;
+  
+  public class UserDao {
+    private DataSource dataSource;
+    
+    public void setDataSource(DataSource dataSource) {
+      this.dataSource = dataSource;
+    }
+    
+    public void add(User user) throws SQLException {
+      Connection c = dataSource.getConnection();
+      ...
+    }
+    
+    ...
+  }
+  ~~~
+
+  
+
+*자바 코드 설정 방식*
+
+```java
+@Bean
+public UserDao userDao() {
+  UserDao userDao = new UserDao();
+  userDao.setDataSource(dataSource());	//DataSource 타입의 빈을 DI 받음.
+  return userDao;
+}
+
+@Bean
+public DataSource dataSource() {
+  SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
+
+  dataSource.setDriverClass(com.mysql.jdbc.Driver.class);
+  dataSource.setUrl("jdbc:mysql://localhost/mesung");
+  dataSource.setUsername("spring");
+  dataSource.setPassword("book");
+
+  return dataSource;
+
+}
+
+```
+
+- UserDao는 이제 DataSource 타입의 dataSource()를 DI 받는다.
+
+
+
+*XML 설정 방식*
+
+~~~xml
+<?xml version=1.0 encoding="UTF-8"?>
+<beans>
+	...
+
+	<bean id="dataSource" class="org.springframwork.jdbc.datasource.SimpleDrvierDataSource"/>
+  
+  ...
+</beans>
+~~~
+
+- ConnectionMaker인 <bean> 을 없애고 dataSource라는 이름의 <bean>을 등록한다.
+- 그런데 UserDao의 setDataSource() 메소드의 파라미터 값인 SimpleDrvierDataSource 빈을 설정해주는 <bean> 부분은 정의하지 않는다.
+  - 그 이유는, UserDao 처럼 다른 빈에 의존하는 경우에는 <property>를 활용하면 됐으나, SimpleDrvierDataSource 오브젝트의 경우 단순 Class 타입의 오브젝트나 텍스트 값이다. 
+  - **그로인해, <property>형식으로 나타나지 않는 것이다. 그러면 XML에서는 어떻게 처리를 해야할 것인가?!**
 
